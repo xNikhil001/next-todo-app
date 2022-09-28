@@ -1,6 +1,7 @@
 import {useState,useEffect} from 'react';
 import Login from '../components/Login.js'
 import Register from '../components/Register.js'
+
 import useSWR from 'swr'
 import {useRouter} from 'next/router';
 
@@ -20,6 +21,7 @@ const fetcher = async (url)=>{
 export default function Home(){
   const router = useRouter();
   const [openLogin,setOpenLogin] = useState(false)
+  const [error,setError] = useState({})
   const [openRegister,setOpenRegister] = useState(false)
   const [update,setUpdate] = useState(false)
   const [id,setId] = useState(null)
@@ -45,10 +47,13 @@ export default function Home(){
   }
   const [formData,setFormData] = useState({
     heading: "",
-    description: ""
   })
   const handleForm = async (e)=>{
     e.preventDefault();
+    if(formData.heading.length <= 0){
+      setError({heading:'Heading cannot be empty!'})
+      return;
+    }
     mutate([...data],false);
     const url = 'http://localhost:8001/api/todo';
     const result = await fetch(url,{
@@ -62,8 +67,18 @@ export default function Home(){
       }
     })
     const res = await result.json();
+    
     mutate([...data])
-    //console.log(res)
+    if(res.ok) setFormData({heading:"",description:""})
+    if(!res.ok){
+      if(res.msg){
+        setList(res.msg)
+        setTimeout(function() {
+          setList("")
+        }, 5000);
+      }
+      if(res.errors) setError(res.errors)
+    }
   }
   const handleChange = (e)=>{
     const name = e.target.name;
@@ -92,6 +107,7 @@ export default function Home(){
     })
     const res = await result.json();
     mutate([...data])
+    if(!res.ok) setList(res.msg)
     if(res.ok){
       setId(null)
       setFormData({heading:"",description:""})
@@ -112,6 +128,7 @@ export default function Home(){
     })
     const res = await result.json();
     mutate([...data])
+    if(!res.ok) setList(res.msg)
   }
   const deleteTodo = async (id)=>{
     mutate([...data],false);
@@ -127,6 +144,7 @@ export default function Home(){
     })
     const res = await result.json();
     mutate([...data])
+    if(!res.ok) setList(res.msg)
   }
   const logout = async ()=>{
     const url = `http://localhost:8001/api/user/logout`;
@@ -141,40 +159,67 @@ export default function Home(){
     })
     const res = await result.json();
     //mutate([...data])
+    if(!res.ok) setList(res.msg)
     localStorage.clear();
     if(res.ok){
       router.reload()
     }
   }
+  
   return(
     <>
-    <h2>Todo App with Auth</h2>
-    {openLogin && <Login close={close}/>}
-    {openRegister && <Register close={close}/>}
-    {!isLoggedIn && <><button onClick={()=>close("login")}>Login</button><button onClick={()=>close("reg")}>Register</button></>}
-    {isLoggedIn && <button onClick={logout}>Logout</button>}
-    <div className="todo-container">
-    {todo && todo.map((el)=><div key={el._id} className="todos"><div className="heading"><input type="checkbox" 
-    onChange={()=>{
-      complete(el._id,)}
-    } className="done-btn" checked={el.isComplete}/>
-   {el.isComplete && <s>{el.heading}</s> }
-   {!el.isComplete && <p>{el.heading}</p>}
-   </div>
-      <div className="img-container">
-      <img className="del-img" src="./delete.svg" width="30px" height="30px" onClick={()=>deleteTodo(el._id)} />
-    {!el.isComplete &&
-      <img className="upd-img" src="./edit.svg" width="20px" height="20px" onClick={()=>updateTodo(el._id,el.heading,el.description)} />
-    }</div></div>)}
-    </div>
-      <form className="login-form">
-        <label className="label">Heading</label>
-        <input className="input" type="text" name="heading" value={formData.heading} onChange={handleChange} />
-        <label className="label">Description</label>
-        <input className="input" type="description" name="description" value={formData.description} onChange={handleChange}/>
-        {update && <button onClick={updTodo}  className="btn">Update</button>}
-        {!update && <button onClick={handleForm}  className="btn">Add</button>}
-      </form>
+     <Toast msg={list}/>
+     
+      <div className="max-w-[1240px] w-11/12 mx-auto">
+        {openLogin && <Login close={close}/>}
+        {openRegister && <Register close={close}/>}
+        {!isLoggedIn && 
+        <div className="my-2 absolute top-1 right-4">
+          <button className="px-6 py-2 hover:bg-blue-300 rounded border-[2px] border-blue-500 uppercase" onClick={()=>close("login")}>
+            Login
+          </button>
+          <button className="ml-2 px-6 py-2 hover:bg-green-300 rounded border-[2px] border-green-500 uppercase" onClick={()=>close("reg")}>
+            Register
+          </button>
+        </div>}
+        {isLoggedIn && <button className="absolute top-1 right-4 px-6 py-2 hover:bg-red-300 rounded border-[2px] border-red-500 uppercase my-2" onClick={logout}>Logout</button>}
+      
+      <div className="pt-28 sm:pt-40">
+        <h2 className="uppercase text-xl font-bold text-center">Todo App with Auth</h2>
+        <form className="my-4 max-w-[600px] w-full mx-auto shadow-lg bg-gray-300 rounded p-4 h-[70px] flex justify-between items-center">
+        <input className="outline-none border-[2px] border-black/60 bg-inherit py-1 w-8/12 md:w-10/12 rounded px-1 placeholder-red-600" type="text" name="heading" value={formData.heading} onChange={handleChange} placeholder={`${error.heading? error.heading : ''}`} />
+        {update && <button onClick={updTodo}  className="bg-amber-400 uppercase font-bold rounded p-1">Update</button>}
+        {!update && <button onClick={handleForm}  className="bg-amber-400 uppercase font-bold rounded px-4 py-1" disabled={!isLoggedIn}>Add</button>}
+        </form>
+      
+        { isLoggedIn && (<div className="my-12 max-w-[600px] w-full mx-auto border border-gray-200 shadow-lg p-2">
+          {todo && todo.map((el)=>
+            <div key={el._id} className="flex bg-gray-300 my-4 w-full p-2">
+              <div className="flex items-center my-2 w-9/12">
+                <input type="checkbox" 
+                  onChange={()=>{
+                    complete(el._id,)}
+                  } 
+                  className="" 
+                  checked={el.isComplete}/>
+            {el.isComplete && 
+              <s className="px-2">{el.heading}</s> 
+            }
+            {!el.isComplete && 
+              <p className="px-2">{el.heading}</p>
+            }
+        </div>
+        <div className="flex justify-between items-center w-3/12">
+          {!el.isComplete &&
+          <span className="text-2xl" onClick={()=>updateTodo(el._id,el.heading,el.description)}>&#9998;</span>
+           }
+          <span className="text-2xl mr-2" onClick={()=>deleteTodo(el._id)}>&#10005;</span>
+        </div></div>)}
+        
+        </div>) }
+      </div>
+      
+      </div>
     </>
   )
 }

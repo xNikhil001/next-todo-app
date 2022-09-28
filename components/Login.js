@@ -25,6 +25,7 @@ export default function Login({close}){
       localStorage.setItem('isLoggedIn',true)
       router.reload()
     }
+    if(!res.ok) alert(res.msg)
     //console.log(res)
   }
   const handleChange = (e)=>{
@@ -34,16 +35,18 @@ export default function Login({close}){
   }
   return(
     <>
-    <div className="login">
-      <span onClick={()=>close('login')} className="close">&#10005;</span>
-      <h1 className="login-heading">Login</h1>
-      <form onSubmit={handleForm} className="login-form">
-        <label className="label">Email</label>
-        <input className="input" type="text" name="email" value={formData.email} onChange={handleChange} />
-        <label className="label">Password</label>
-        <input className="input" type="password" name="password" value={formData.password} onChange={handleChange}/>
-        <button className="btn">Login</button>
+    <div className="absolute top-0 left-0 w-full h-screen bg-black/70 z-50">
+      <div className="bg-red-100 w-[300px] h-[380px] flex flex-col absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <span onClick={()=>close('login')} className="p-3 text-lg">&#10005;</span>
+        <h1 className="uppercase text-center text-lg">Login</h1>
+        <form onSubmit={handleForm} className="flex flex-col p-4">
+        <label className="">Email</label>
+        <input className="outline-none border-b-[2px] border-black/70 bg-inherit" type="text" name="email" value={formData.email} onChange={handleChange} />
+        <label className="mt-8">Password</label>
+        <input className="outline-none border-b-[2px] border-black/70 bg-inherit" type="password" name="password" value={formData.password} onChange={handleChange}/>
+        <button className="w-4/12 mx-auto mt-16 border-[2px] py-2 border-black/70">Login</button>
       </form>
+      </div>
     </div>
     </>
   )
